@@ -4,11 +4,12 @@
 // screenshot silently clamps to Chromium's ~500px minimum window width).
 // Optional clicks let you capture UI states such as an opened sidebar.
 //
-//   node tools/review/capture-cdp.mjs --url http://localhost:5173/ --out shots/01.png \
+//   node tools/capture-cdp.mjs --url http://localhost:5173/ --out shots/01.png \
 //        --width 375 --height 812 [--scale 2] [--mobile] [--settle 1500] \
 //        [--click "button[aria-label='Show sidebar']" --click "..."] [--eval "js"]
 //
-// No dependencies: Node 22+ (global WebSocket) and an installed Edge or Chrome.
+// No dependencies: Node 22+ (global WebSocket) and an installed Edge, Chrome or Chromium
+// (Windows, macOS or Linux).
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -43,13 +44,27 @@ if (!opts.url || !opts.out) {
 // Forward slashes: Windows accepts them and bash shells drop the parenthesised env name.
 const pf = process.env['ProgramFiles'] ?? 'C:/Program Files',
   pf86 = process.env['ProgramFiles(x86)'] ?? 'C:/Program Files (x86)'
-const browser = [
-  `${pf86}/Microsoft/Edge/Application/msedge.exe`,
-  `${pf}/Microsoft/Edge/Application/msedge.exe`,
-  `${pf}/Google/Chrome/Application/chrome.exe`,
-  `${pf86}/Google/Chrome/Application/chrome.exe`,
-].find((p) => existsSync(p))
-if (!browser) throw new Error('Neither Edge nor Chrome found.')
+const candidates = {
+  win32: [
+    `${pf86}/Microsoft/Edge/Application/msedge.exe`,
+    `${pf}/Microsoft/Edge/Application/msedge.exe`,
+    `${pf}/Google/Chrome/Application/chrome.exe`,
+    `${pf86}/Google/Chrome/Application/chrome.exe`,
+  ],
+  darwin: [
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+  ],
+  linux: [
+    '/usr/bin/microsoft-edge',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ],
+}
+const browser = (candidates[process.platform] ?? []).find((p) => existsSync(p))
+if (!browser) throw new Error(`No Edge, Chrome or Chromium found for ${process.platform}.`)
 
 const profile = mkdtempSync(join(tmpdir(), 'ak-review-cdp-'))
 const proc = spawn(
