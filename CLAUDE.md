@@ -1,7 +1,8 @@
 # ak-review
 
-Architecture-first code review tool for TypeScript and Python. Read `docs/DESIGN.md` first:
-it has the decisions from the design interview and the phase plan. Stay inside the plan;
+Architecture-first code review tool for TypeScript and Python. Read `docs/DESIGN.md` and
+`docs/HANDOFF.md` (current status, next steps, gotchas) first. DESIGN.md has the
+decisions from the design interview and the phase plan. Stay inside the plan;
 don't add features the user ruled out (e.g. an agent that refactors code to match a
 proposal).
 
