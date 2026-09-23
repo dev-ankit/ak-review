@@ -1,0 +1,20 @@
+# ak-review policy for ak-review itself. Mirrors tools/lint-boundaries.ts.
+# Globs match repo-relative module paths.
+
+exclude:
+  - '**/*.test.*'
+  - '**/test/**'
+  - 'tools/capture-cdp.mjs'
+
+# Outermost first; dependencies must point down this list.
+layers:
+  - name: cli
+    match: ['src/cli/**']
+  - name: web
+    match: ['src/web/**']
+  - name: server
+    match: ['src/server/**']
+  - name: lang
+    match: ['src/lang/**']
+  - name: core
+    match: ['src/core/**']

@@ -1,0 +1,75 @@
+{
+  "name": "ak-review",
+  "version": "0.0.1",
+  "description": "Architecture-first code review for TypeScript and Python",
+  "keywords": [
+    "architecture",
+    "call-graph",
+    "claude",
+    "code-review",
+    "python",
+    "typescript",
+    "uml"
+  ],
+  "homepage": "https://github.com/dev-ankit/ak-review#readme",
+  "bugs": {
+    "url": "https://github.com/dev-ankit/ak-review/issues"
+  },
+  "license": "MIT",
+  "author": "Ankit Khullar",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dev-ankit/ak-review.git"
+  },
+  "bin": {
+    "ak-review": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch-path=src/cli --watch-path=src/server --watch-path=src/lang --watch-path=src/core src/cli/main.ts serve --dev --host 0.0.0.0",
+    "start": "node src/cli/main.ts serve",
+    "extract": "node src/cli/main.ts extract",
+    "build": "pnpm lint && pnpm fmt:check && tsc -b && vite build && rolldown -c",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "lint": "node tools/lint-boundaries.ts",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "prepack": "pnpm build",
+    "smoke": "node tools/smoke-pack.ts"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.0-rc.117",
+    "@typescript/typescript6": "^6.0.2",
+    "effect": "4.0.0-rc.117",
+    "picomatch": "^4.0.7",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/picomatch": "^4.0.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@xyflow/react": "^12.11.6",
+    "elkjs": "^0.12.0",
+    "lucide-react": "^1.47.0",
+    "oxfmt": "^0.70.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "rolldown": "1.2.9",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "zustand": "^5.0.15"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@12.5.1"
+}

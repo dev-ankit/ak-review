@@ -1,0 +1,9 @@
+{
+  "$schema": "https://oxc.rs/schemas/oxfmt.json",
+  "semi": false,
+  "singleQuote": true,
+  "printWidth": 100,
+  "endOfLine": "lf",
+  "ignorePatterns": ["dist", "docs", "*.md", "pnpm-lock.yaml", "test/fixtures", ".ak-review"],
+  "sortImports": true
+}
