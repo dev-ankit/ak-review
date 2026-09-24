@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url'
 
 /**
  * The package as users get it: pack (which builds), install the tarball into a scratch
- * project with npm, then run the installed CLI against a copy of the test fixture:
- * --version, extract, and serve (UI page plus the model API).
+ * project with npm, then run the installed CLI against copies of the test fixtures:
+ * --version, extract (TypeScript, and Python, which loads the bundled tree-sitter grammar
+ * and runs Pyright from the install), and serve (UI page plus the model API).
  */
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const scratch = mkdtempSync(join(tmpdir(), 'ak-review-smoke-'))
@@ -24,6 +25,9 @@ try {
 
   const app = join(scratch, 'app')
   cpSync(join(root, 'test', 'fixtures', 'layered'), join(app, 'repo'), { recursive: true })
+  cpSync(join(root, 'test', 'fixtures', 'python-layered'), join(app, 'pyrepo'), {
+    recursive: true,
+  })
   writeFileSync(join(app, 'package.json'), '{ "name": "smoke", "private": true }\n')
   console.log('installing…')
   runShim('npm', ['install', '--no-audit', '--no-fund', join(scratch, tarball)], app)
@@ -34,6 +38,12 @@ try {
 
   const extracted = run('node', [cli, 'extract', 'repo'], app)
   check(/extracted 6 modules/.test(extracted), `extract output:\n${extracted}`)
+
+  const pyExtracted = run('node', [cli, 'extract', 'pyrepo'], app)
+  check(
+    /extracted 9 modules, 8 imports, 14 calls/.test(pyExtracted),
+    `extract (python) output:\n${pyExtracted}`,
+  )
 
   await smokeServe(cli, app)
   console.log('smoke ok')

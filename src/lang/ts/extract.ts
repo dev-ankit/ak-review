@@ -28,7 +28,7 @@ export const typescriptExtractor: Extractor = {
   name: 'typescript',
   extensions: ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'],
   configFiles: /(^|\/)((tsconfig|jsconfig)[^/]*\.json|package\.json)$/,
-  extract: extractTypeScript,
+  extract: async (root) => extractTypeScript(root),
 }
 
 interface Project {

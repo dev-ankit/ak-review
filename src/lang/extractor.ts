@@ -18,7 +18,8 @@ export interface Extractor {
   extensions: string[]
   /** Other files whose change should too (configs). */
   configFiles: RegExp
-  extract(root: string): Extraction
+  /** Async because some extractors talk to a language server (Pyright). */
+  extract(root: string): Promise<Extraction>
 }
 
 /** Directories no extractor descends into. */

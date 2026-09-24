@@ -63,8 +63,15 @@ extractors ──► IR (.ak-review/ir.json) ──► policy (.ak-review/policy
   config covers go into one loose program. The owning program's type checker resolves calls,
   including through aliases, namespaces, re-exports, `new`, and JSX. Calls through an
   interface-typed receiver stay unresolved for now; the AI fill-in in phase 6 covers them.
-- **Python** (phase 2): tree-sitter for structure and complexity, Pyright (npm, no Python
-  install needed) over LSP for import and call resolution.
+- **Python** (`src/lang/py`): tree-sitter (`web-tree-sitter` plus the grammar's `.wasm`,
+  shipped in `dist/`) for symbols, ranges, complexity, imports and call sites. Imports are
+  resolved by the extractor itself against the source roots (repo root, `src/`, package
+  dirs from `pyproject.toml`): deterministic and interpreter-free. Calls come from Pyright
+  (npm, no Python install needed) as a language server: `callHierarchy/outgoingCalls` for
+  each function and method, `prepareCallHierarchy` for calls in module and class bodies.
+  Every file is opened first (Pyright re-tokenizes closed files per call), and its
+  background checking is kept postponed. `typeOnly` imports are the ones under
+  `if TYPE_CHECKING:`.
 
 File discovery uses `git ls-files --cached --others --exclude-standard`, so anything
 gitignored (build output, bundles, scratch) stays out.
@@ -107,8 +114,8 @@ then handles the ambiguous parts and walks the core change first. Output: a mark
 
 - **npm package** (`npx ak-review serve`). `dist/cli.js` is a Rolldown bundle of the CLI,
   server and extractors (Node will not type-strip `.ts` under node_modules); `dist/web` is
-  the prebuilt UI. Runtime deps (Effect, TS 6 API, Pyright, picomatch, yaml) are installed,
-  not bundled. `pnpm smoke` packs, installs with npm into a scratch dir and runs the result.
+  the prebuilt UI. Runtime deps (Effect, TS 6 API, Pyright, web-tree-sitter, picomatch, yaml,
+  smol-toml) are installed, not bundled; the Python grammar `.wasm` is copied into `dist/`. `pnpm smoke` packs, installs with npm into a scratch dir and runs the result.
   The package stays `private` until public/private and a license are decided.
 - **Claude Code plugin** (phase 5): the GitHub repo doubles as a plugin marketplace; the
   plugin's `.mcp.json` runs `npx -y ak-review@<version> mcp` and ships a review skill.
@@ -119,7 +126,7 @@ then handles the ambiguous parts and walks the core change first. Output: a mark
 ## Phases
 
 1. IR, TS extractor, policy, web view with drill-down, violations, cycles. **(done)**
-2. Python extractor.
+2. Python extractor. **(done)**
 3. Metrics: complexity, coverage runner and import, churn; CRAP and hotspot coloring.
 4. Diff overlay: branch, commit range, PR.
 5. Claude companion over MCP; what-if proposals.

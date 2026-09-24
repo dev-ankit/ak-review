@@ -10,7 +10,8 @@ proposal).
 
 Node 24 (runs `.ts` directly via type stripping, so no build step for the server), Vite 8,
 React 19, TypeScript 7 (native `tsc`) for type checking, `@typescript/typescript6` for the
-compiler API the TS extractor needs, `@xyflow/react` + `elkjs` for the diagram, Zustand,
+compiler API the TS extractor needs, `web-tree-sitter` and Pyright (as a language server)
+for the Python extractor, `@xyflow/react` + `elkjs` for the diagram, Zustand,
 Vitest, Oxfmt. The CLI (`src/cli`) is Effect v4 (`effect/unstable/cli` +
 `@effect/platform-node`, pinned to an exact rc); Effect is not used elsewhere yet.
 Rolldown bundles the CLI into `dist/cli.js` for publishing.

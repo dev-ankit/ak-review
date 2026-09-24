@@ -1,6 +1,6 @@
 # Handoff
 
-Status as of 2026-09-23. Read `docs/DESIGN.md` (goals, decisions, phases) and `CLAUDE.md`
+Status as of 2026-09-23 (phase 2). Read `docs/DESIGN.md` (goals, decisions, phases) and `CLAUDE.md`
 (stack, commands, conventions) first; this file is what they don't cover: where things
 stand, what to do next, and what bit us.
 
@@ -8,53 +8,23 @@ stand, what to do next, and what bit us.
 
 - **Phase 1 is done**: IR, TypeScript extractor, policy, web viewer (drill-down, layer
   violations, cycles, complexity, source panel), Effect v4 CLI (`serve`, `extract`),
-  Rolldown bundle for npm, CI on Linux/macOS/Windows (all green).
-- Repo: https://github.com/dev-ankit/ak-review (public, MIT). One commit on `main`.
-- **Not published to npm.** The user decides when (suggested: after phase 2). Don't run
-  `npm publish` without asking.
-- Verified on real repos: `C:\Repos\ankit\architorio` (81 modules, ~1.8s) and ak-review
-  itself (its own `.ak-review/policy.yaml` checks its layers: 0 violations).
+  Rolldown bundle for npm, CI on Linux/macOS/Windows.
+- **Phase 2 is done**: the Python extractor (`src/lang/py/`, see DESIGN.md). Verified on
+  `C:\Repos\external\pptx-gen` (547 `.py` files, 37k call edges, about 38s; screenshots
+  looked right at root, `src/pptgen/`, `spec/` and `spec/loader.py`), on architorio (81
+  modules, unchanged) and on ak-review itself (0 violations).
+- `Extractor.extract` is now async (Pyright answers over LSP). `extractAll`,
+  `Session.extract` and the fixtures await it; session refreshes run one at a time through
+  a queue, and `POST /api/refresh` answers after the extraction.
+- Repo: https://github.com/dev-ankit/ak-review (public, MIT).
+- **Not published to npm.** The user decides when (suggested: after phase 2, so now is the
+  time to ask). Don't run `npm publish` without asking.
 
-## Next: phase 2, the Python extractor
+## Next: phase 3, metrics
 
-Goal: `ak-review serve C:\Repos\external\pptx-gen` shows the same views it shows for TS.
-pptx-gen is ~550 `.py` files, uv-managed, `requires-python >=3.12,<3.13`.
-
-The contract is `Extractor` in `src/lang/extractor.ts` producing the IR in
-`src/core/ir.ts`. Nothing downstream of the IR should need to change. Model the work on
-`src/lang/ts/extract.ts`.
-
-1. **`src/lang/py/extract.ts`**: `name: 'python'`, `extensions: ['.py']`,
-   `configFiles: /(^|\/)(pyproject\.toml|setup\.cfg|pyrightconfig\.json)$/`. Register it in
-   `src/lang/index.ts`. Use `listRepoFiles` (git-aware) for discovery, like the TS extractor.
-2. **Structure** (modules, symbols, ranges, complexity): tree-sitter via `web-tree-sitter`
-   plus a Python grammar `.wasm`. Check which npm package actually ships a prebuilt
-   `tree-sitter-python.wasm` for the current web-tree-sitter ABI before committing to one.
-   Symbols: top-level `def`/`async def` → `function`, `class` → `class` with methods
-   (`method`), module-level assignments → `variable`. Nested defs belong to their enclosing
-   symbol, same as TS. `exported` = name not starting with `_` (or listed in `__all__`).
-   Complexity: 1 + if/elif, for, while, except, conditional expression, `and`/`or`,
-   comprehension `if`, `case`.
-3. **Imports**: resolving them yourself is simpler and deterministic. Source roots = repo
-   root, plus `src/` if present, plus package dirs from `pyproject.toml`. Handle relative
-   imports (`from . import x`, `from ..a import b`), `import a.b.c`, and packages
-   (`a/b/__init__.py`). Unresolved → `externals` (top-level package name). Imports under
-   `if TYPE_CHECKING:` are `typeOnly: true`.
-4. **Calls**: Pyright (npm `pyright`, runs on Node, no Python needed) as a language server
-   (`pyright-langserver --stdio`). For each call site tree-sitter finds, send
-   `textDocument/definition` and map the returned location onto a symbol range → call edge
-   with the call-site line. Batch requests concurrently; 550 files is thousands of requests.
-   Record the owner the same way TS does (the enclosing top-level symbol or method; module
-   id for top-level code). A missing `.venv` is fine: local definitions still resolve.
-5. **Tests**: add `test/fixtures/python-layered/` mirroring `test/fixtures/layered/`
-   (layer violation, cycle, class with methods, re-export via `__init__.py`, relative
-   imports, a `TYPE_CHECKING` import), and `test/py-extract.test.ts` mirroring
-   `test/ts-extract.test.ts`. Default policy already excludes Python test files.
-6. **Packaging**: new runtime deps go in `dependencies` (Rolldown externalizes everything
-   in there automatically). Grammar `.wasm` files must be loadable from the installed
-   package: extend `pnpm smoke` to extract a Python fixture too. CI must stay green on all
-   three OSes.
-7. Then screenshot pptx-gen (below) and look at it before calling it done.
+See DESIGN.md "Metrics (phase 3)": coverage runner and import (lcov for TS, coverage.py's
+`coverage.json` for Python), git churn, CRAP, hotspot coloring. The runner and the overlay
+talk only through files.
 
 ## How to work here
 
@@ -96,7 +66,30 @@ follows the session's system instructions.
   `.gitignore`). That's intended; mention it to the user when you do it to one of their
   repos.
 
+- **Pyright performance traps** (each cost minutes on pptx-gen before the fix):
+  closed files are re-tokenized for every call Pyright resolves (quadratic), so every file
+  is opened first; open files get type-checked in the background, which
+  `Pyright.stayActive` postpones (a cheap definition request before each query counts as
+  user activity); per-call-site definition requests are much slower than one
+  `outgoingCalls` per function (and `definition` maps typeshed stubs to sources on every
+  call). Profile with `node --cpu-prof` on `langserver.index.js` before guessing.
+- **Pyright URIs** come back as `file:///c%3A/...`; compare paths via `fileURLToPath`,
+  never raw strings.
+- **tree-sitter nodes are fresh wrappers per access**: compare `node.id`, not references.
+  Columns are UTF-16, the same as LSP.
+- **pnpm supply-chain policy** rejects packages younger than its minimum release age, and
+  `pnpm add` may silently add a `minimumReleaseAgeExclude` to `pnpm-workspace.yaml`.
+  Don't keep it; pin an older version instead (`smol-toml` is on 1.8 for that reason).
+- **tree-sitter-python is a dev dependency** on purpose: only its `.wasm` is used, and Rolldown
+  copies that into `dist/`. As a runtime dependency its native install script made npm warn.
+
 ## Known gaps (planned, not bugs)
+
+- Python extraction is whole-repo on every save (about 38s on pptx-gen, half of it tests).
+  No incremental extraction yet.
+- Python calls through untyped or dynamically dispatched receivers stay unresolved, and
+  calls in module/class bodies are only asked for names some repo symbol has (phase 6 fills
+  the rest).
 
 - Module-level call views are a hairball on big files (architorio's `edit.ts`: 41 boxes,
   123 arrows). Phase 6's lineage view (one function ± N hops) fixes it; don't patch it in

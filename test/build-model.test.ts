@@ -4,7 +4,7 @@ import { buildModel } from '../src/server/build-model.ts'
 import { DEFAULT_POLICY, type Policy, parsePolicy } from '../src/server/policy.ts'
 import { layeredIr } from './fixture.ts'
 
-const ir = layeredIr()
+const ir = await layeredIr()
 const policy = (p: Partial<Policy>): Policy => ({ ...DEFAULT_POLICY, ...p })
 
 describe('buildModel', () => {

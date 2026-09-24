@@ -5,7 +5,7 @@ import { buildModel } from '../src/server/build-model.ts'
 import { DEFAULT_POLICY } from '../src/server/policy.ts'
 import { layeredIr } from './fixture.ts'
 
-const model = buildModel(layeredIr(), { ...DEFAULT_POLICY, exclude: ['scripts/**'] })
+const model = buildModel(await layeredIr(), { ...DEFAULT_POLICY, exclude: ['scripts/**'] })
 const edgeIds = (focus: string) =>
   computeView(model, focus)
     .edges.map((e) => `${e.from} -> ${e.to}${e.cycle ? ' (cycle)' : ''}`)

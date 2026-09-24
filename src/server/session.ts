@@ -25,6 +25,8 @@ export class Session {
   private watcher: FSWatcher | undefined
   private timer: NodeJS.Timeout | undefined
   private pending: 'extract' | 'policy' | undefined
+  /** Refreshes run one at a time; an extraction can take seconds (Pyright). */
+  private queue: Promise<void> = Promise.resolve()
 
   constructor(root: string, extractors: Extractor[] = allExtractors) {
     this.root = root
@@ -32,10 +34,10 @@ export class Session {
     ensureWorkspace(root)
   }
 
-  extract(): void {
+  async extract(): Promise<void> {
     this.emit({ type: 'status', message: 'extracting' })
     const started = performance.now()
-    this.ir = extractAll(this.root, this.extractors)
+    this.ir = await extractAll(this.root, this.extractors)
     writeFileSync(join(this.root, '.ak-review', 'ir.json'), JSON.stringify(this.ir))
     const seconds = ((performance.now() - started) / 1000).toFixed(1)
     console.log(
@@ -79,17 +81,32 @@ export class Session {
   private schedule(work: 'extract' | 'policy'): void {
     if (this.pending !== 'extract') this.pending = work
     clearTimeout(this.timer)
-    this.timer = setTimeout(() => {
-      const next = this.pending
-      this.pending = undefined
-      try {
-        if (next === 'extract') this.extract()
-        else this.rebuild()
-      } catch (e) {
-        console.error(e)
-        this.emit({ type: 'status', message: `refresh failed: ${(e as Error).message}` })
-      }
-    }, 300)
+    this.timer = setTimeout(() => void this.enqueue(), 300)
+  }
+
+  /** Re-extract now, after any refresh in flight. */
+  reextract(): Promise<void> {
+    this.pending = 'extract'
+    clearTimeout(this.timer)
+    return this.enqueue()
+  }
+
+  private enqueue(): Promise<void> {
+    this.queue = this.queue.then(() => this.refresh())
+    return this.queue
+  }
+
+  /** Does whatever was scheduled by the time the previous refresh finished. */
+  private async refresh(): Promise<void> {
+    const next = this.pending
+    this.pending = undefined
+    try {
+      if (next === 'extract') await this.extract()
+      else if (next === 'policy') this.rebuild()
+    } catch (e) {
+      console.error(e)
+      this.emit({ type: 'status', message: `refresh failed: ${(e as Error).message}` })
+    }
   }
 
   private emit(event: SessionEvent): void {

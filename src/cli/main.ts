@@ -18,9 +18,9 @@ const repo = Argument.Directory('repo', { mustExist: true }).pipe(
 /** A session that has extracted once and watches the repo until the scope closes. */
 const watchedSession = (root: string) =>
   Effect.acquireRelease(
-    Effect.sync(() => {
+    Effect.promise(async () => {
       const session = new Session(root)
-      session.extract()
+      await session.extract()
       session.watch()
       return session
     }),
@@ -78,7 +78,7 @@ const extract = Command.make('extract', { repo }, (config) =>
   Effect.gen(function* () {
     const root = resolve(config.repo)
     const session = new Session(root)
-    session.extract()
+    yield* Effect.promise(() => session.extract())
     const model = session.model!
     const violations = model.edges.filter((e) => e.violation && e.kind === 'import')
     if (model.layers.length > 0) {

@@ -91,8 +91,10 @@ function api(session: Session, url: URL, req: IncomingMessage, res: ServerRespon
       case 'GET /api/events':
         return events(session, req, res)
       case 'POST /api/refresh':
-        session.extract()
-        return send(res, 200, { generatedAt: session.model?.generatedAt })
+        void session
+          .reextract()
+          .then(() => send(res, 200, { generatedAt: session.model?.generatedAt }))
+        return
       default:
         return send(res, 404, { error: 'not found' })
     }

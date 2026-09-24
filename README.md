@@ -21,6 +21,11 @@ node src/cli/main.ts extract ../some-repo   # IR + layer violations to stdout
 Or, after `pnpm build`, `pnpm link --global` once and use `ak-review serve [repo]` anywhere.
 `ak-review --help` lists commands and flags (`--port`, `--host`, `--no-open`).
 
+Languages: TypeScript/JavaScript (the TypeScript compiler) and Python (tree-sitter for
+structure, Pyright for calls). Python needs no interpreter; a `.venv` in the repo root is
+used when present. Python call resolution takes a while on big repos (about 40s for 550
+files).
+
 The first run creates `<repo>/.ak-review/` with a commented `policy.yaml` and its own
 `.gitignore`, which keeps only the policy. Everything else in there (`ir.json`) is generated.
 

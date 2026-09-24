@@ -1,0 +1,3 @@
+allowBuilds:
+  # Only its prebuilt .wasm grammar is used (through web-tree-sitter), not the native binding.
+  tree-sitter-python: false

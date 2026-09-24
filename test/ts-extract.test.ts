@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { IrSymbol } from '../src/core/ir.ts'
 import { layeredIr } from './fixture.ts'
 
-const ir = layeredIr()
+const ir = await layeredIr()
 const mod = (id: string) => ir.modules.find((m) => m.id === id)!
 const calls = (from: string) =>
   ir.calls

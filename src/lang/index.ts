@@ -1,11 +1,12 @@
 import type { Ir } from '../core/ir.ts'
 import type { Extractor } from './extractor.ts'
+import { pythonExtractor } from './py/extract.ts'
 import { typescriptExtractor } from './ts/extract.ts'
 
-export const extractors: Extractor[] = [typescriptExtractor]
+export const extractors: Extractor[] = [typescriptExtractor, pythonExtractor]
 
 /** Run every extractor over the repo and merge the results into one IR. */
-export function extractAll(root: string, using: Extractor[] = extractors): Ir {
+export async function extractAll(root: string, using: Extractor[] = extractors): Promise<Ir> {
   const ir: Ir = {
     version: 1,
     root,
@@ -17,7 +18,7 @@ export function extractAll(root: string, using: Extractor[] = extractors): Ir {
   }
   for (const extractor of using) {
     try {
-      const part = extractor.extract(root)
+      const part = await extractor.extract(root)
       ir.modules.push(...part.modules)
       ir.imports.push(...part.imports)
       ir.calls.push(...part.calls)
